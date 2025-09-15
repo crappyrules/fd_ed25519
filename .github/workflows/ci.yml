@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-13, macos-14]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+      - name: Install build deps (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y clang pkg-config libssl-dev
+      - name: Install build deps (macOS)
+        if: runner.os == 'macOS'
+        run: brew install llvm openssl pkg-config
+      - name: Install build deps (Windows)
+        if: runner.os == 'Windows'
+        run: choco install llvm openssl pkgconfiglite
+      - name: Run tests
+        run: cargo test --all
+      - name: Build examples
+        run: cargo build --examples
+      - name: Run benches
+        run: cargo bench --no-run

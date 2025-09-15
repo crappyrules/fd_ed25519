@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-artifacts:
+    name: Build and Upload Artifacts (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-13, macos-14]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Install build deps (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y clang pkg-config libssl-dev
+      - name: Install build deps (macOS)
+        if: runner.os == 'macOS'
+        run: brew install llvm openssl pkg-config
+      - name: Install build deps (Windows)
+        if: runner.os == 'Windows'
+        run: choco install llvm openssl pkgconfiglite
+      - name: Build crate (release)
+        run: cargo build --release
+      - name: Package crate
+        run: cargo package
+      - name: Upload crate artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fd_ed25519-${{ matrix.os }}
+          path: target/package/*.crate
